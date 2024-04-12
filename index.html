@@ -211,47 +211,46 @@ function toggleMute() {
 }
 
 
-
-  // Function to play radio stream for the selected country
-  function playRadio(countryCode) {
-    fetchRadioStationsByCountryCode(countryCode)
-      .then(data => {
-        stationsData = data.getElementsByTagName('station');
-        if (stationsData.length > 0) {
-          // Find a new station to play, excluding the previously played station
-          let newStationIndex = findNewStationIndex();
-          if (newStationIndex !== -1) {
-            currentStationIndex = newStationIndex;
-            playCurrentStation();
-          } else {
-            console.error('No new radio stations found for ' + countryCode);
-          }
-        } else {
-          console.error('No radio stations found for ' + countryCode);
-        }
-      })
-      .catch(error => {
-        console.error('Error fetching radio stations for ' + countryCode + ':', error);
-      });
-  }
-
-  // Function to play the current station
-  function playCurrentStation() {
-    if (stationsData && stationsData.length > 0 && currentStationIndex !== -1) {
-      const selectedStationUrl = stationsData[currentStationIndex].getAttribute('url');
-      const selectedStationName = stationsData[currentStationIndex].getAttribute('name');
-      if (selectedStationUrl) {
-        audio.src = selectedStationUrl;
-        audio.play()
-          .catch(error => {
-            console.error('Error playing radio stream:', error.message);
-            // Automatically change channel when source is not found
-            changeChannel();
-          });
-        document.getElementById('channelName').innerText = selectedStationName;
+// Function to play radio stream for the selected country
+async function playRadio(countryCode) {
+  try {
+    const data = await fetchRadioStationsByCountryCode(countryCode);
+    stationsData = data.getElementsByTagName('station');
+    
+    if (stationsData.length > 0) {
+      let newStationIndex = findNewStationIndex();
+      if (newStationIndex !== -1) {
+        currentStationIndex = newStationIndex;
+        playCurrentStation();
+      } else {
+        console.error('No new radio stations found for ' + countryCode);
       }
+    } else {
+      console.error('No radio stations found for ' + countryCode);
+    }
+  } catch (error) {
+    console.error('Error fetching or playing radio stations:', error);
+  }
+}
+
+// Function to play the current station
+function playCurrentStation() {
+  if (stationsData && stationsData.length > 0 && currentStationIndex !== -1) {
+    const selectedStationUrl = stationsData[currentStationIndex].getAttribute('url');
+    const selectedStationName = stationsData[currentStationIndex].getAttribute('name');
+    
+    if (selectedStationUrl) {
+      audio.src = selectedStationUrl;
+      if (audio.paused) { // Check if audio is paused before playing
+        audio.play().catch(error => {
+          console.error('Error playing radio stream:', error.message);
+          changeChannel(); // Automatically change channel when source is not found
+        });
+      }
+      document.getElementById('channelName').innerText = selectedStationName;
     }
   }
+}
 
   // Function to find a new station index
   function findNewStationIndex() {
@@ -270,11 +269,19 @@ function toggleMute() {
 
   // Function to change the channel
   function changeChannel() {
-    if (stationsData && stationsData.length > 0 && currentStationIndex !== -1) {
+  if (stationsData && stationsData.length > 0 && currentStationIndex !== -1) {
+    // Pause the audio before changing channels
+    if (!audio.paused) {
+      audio.pause();
+    }
+
+    // Wait for a short delay before changing the channel
+    setTimeout(() => {
       currentStationIndex = (currentStationIndex + 1) % stationsData.length; // Cycle through stations
       playCurrentStation();
-    }
+    }, 500); // Adjust the delay time as needed
   }
+}
 
   // Function to toggle pause/resume
   function togglePauseResume() {
